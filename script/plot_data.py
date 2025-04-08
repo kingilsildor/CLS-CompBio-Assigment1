@@ -122,3 +122,60 @@ def plot_scatter_fit(
         plt.savefig(os.path.join(OUTPUT_DIR, "scatter_fit.png"), dpi=FIG_DPI)
     else:
         plt.show()
+
+
+def plot_feasible_region(v6_max, vmax, succ, fum, km, d_target):
+    """
+    Plot the feasible region for the given parameters.
+
+    Params
+    ------
+    - v6_max (float): Maximum reaction rate for the sixth reaction.
+    - vmax (float): Maximum reaction rate for the first reaction.
+    - succ (float): Concentration of succinate.
+    - fum (float): Concentration of fumarate.
+    - km (float): Michaelis constant.
+    """
+
+    v6_MM = vmax * (succ / (km + succ)) - vmax * (fum / (km + fum))
+    v6_effective = min(v6_MM, v6_max)
+
+    v1_values = np.linspace(0, v6_effective, 100)
+    v6_diagonal = v1_values.copy()
+
+    v6_horizontal = v6_effective * np.ones_like(v1_values)
+
+    d_line = d_target + v1_values
+
+    plt.figure(figsize=(8, 6))
+    plt.plot(v1_values, v6_diagonal, "r--", linewidth=2, label=r"$v_6 = v_1$")
+    plt.plot(
+        v1_values,
+        v6_horizontal,
+        "b-",
+        linewidth=2,
+        label=r"$v_6 \leq v_{6,\max}$",
+    )
+    plt.fill_between(
+        v1_values,
+        v6_diagonal,
+        v6_horizontal,
+        color="gray",
+        alpha=0.3,
+        label=r"Feasible Region: $v_1 < v_6 \leq$ $v_{6,max}$",
+    )
+    plt.plot(
+        v1_values, d_line, "m-", linewidth=2, label=r"$v_6 = v_1 + D_{\rm target}$"
+    )
+
+    plt.xlabel(r"$v_1$", fontsize=14)
+    plt.ylabel(r"$v_6$", fontsize=14)
+    plt.title(
+        "Solution Space in (v₁, v₆)",
+        fontsize=16,
+    )
+    plt.legend(fontsize=12)
+    plt.xlim(0, v6_effective + 0.5)
+    plt.ylim(0, v6_effective + 0.5)
+    plt.grid(True)
+    plt.show()
