@@ -174,12 +174,12 @@ def main():
     for S2 in constants["S2"]:
         v_max = constants[constants["S2"] == S2]["V_max"].values[0]
         K_m1 = constants[constants["S2"] == S2]["K_m1"].values[0]
-        K_m2 = calculate_constants(S2, v, v_max, K_m1)
-        print(f"S2: {S2} mM")
-        print(f"v: {v:.4f} mM/s")
-        print(f"v_max: {v_max:.4f} mM/s")
-        print(f"K_m1: {K_m1:.4f} mM")
-        print(f"K_m2: {K_m2:.4f} mM\n")
+        # K_m2 = calculate_constants(S2, v, v_max, K_m1)
+        # print(f"S2: {S2} mM")
+        # print(f"v: {v:.4f} mM/s")
+        # print(f"v_max: {v_max:.4f} mM/s")
+        # print(f"K_m1: {K_m1:.4f} mM")
+        # print(f"K_m2: {K_m2:.4f} mM\n")
 
 
 if __name__ == "__main__":
