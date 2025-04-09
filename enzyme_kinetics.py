@@ -129,6 +129,11 @@ def plot_lineweaver_burk(df, save=False):
         plt.show()
 
 
+def calculate_constants():
+    ...
+    # K2 = (vmax * S1 * S2 - v * K1 * S2 - v * S1 * S2) / (v * S1)
+
+
 def main():
     data = pd.read_csv("data/Kinetics.csv")
 
