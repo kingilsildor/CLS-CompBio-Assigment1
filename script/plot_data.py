@@ -67,10 +67,10 @@ def plot_eadie_hofstee(
     for s2, group in df[df["S2"] <= max_value].groupby("S2"):
         v = group["Rate"]
         s1 = group["S1"]
-        plt.plot(v, v / s1, "o-", label=f"[S2] = {s2:.1f} mM")
+        plt.plot(v / s1, v, "o-", label=f"[S2] = {s2:.2f} mM")
 
-    plt.xlabel("Rate (mM/s)")
-    plt.ylabel("Rate/[S1] (s/mM)")
+    plt.xlabel("Rate/[S1] (s/mM)")
+    plt.ylabel("Rate (mM/s)")
     plt.title(
         f"Eadie-Hofstee Plot for different values of [S2]\n$K_m$ = {k_m:.2f} mM, $v_{{max}}$ = {v_max:.2f} mM/s"
     )

@@ -1,9 +1,9 @@
 import numpy as np
 
-from script.plot_data import plot_lineweaver_burk, plot_scatter_fit
-from src.curve_fitting import bisubstrate_curve, michaelis_menten_curve
+from script.plot_data import plot_eadie_hofstee, plot_scatter_fit
+from src.curve_fitting import michaelis_menten_curve
 from src.load_data import load_data
-from src.models import michaelis_menten
+from src.models import bisubstrate_rate, michaelis_menten
 
 
 def figures(data):
@@ -18,27 +18,25 @@ def figures(data):
         max_value=1.0,
     )
 
-    plot_lineweaver_burk(
-        data,
-        params[0],
-        params[1],
-        max_value=1.0,
+    plot_eadie_hofstee(data, params[0], params[1], max_value=1.0, save=False)
+
+
+def eadie_hofstee(data):
+    params, _ = michaelis_menten_curve(data["S1"], data["Rate"])
+    v_max, k_m = params
+    v = bisubstrate_rate(
+        (data["S1"], data["S2"]),
+        v_max,
+        k_m,
+        k_m,
     )
+    print(v)
 
 
 def main():
     file_path = "data/Kinetics.csv"
     data = load_data(file_path)
-
-    params, _ = bisubstrate_curve(
-        data["S1"],
-        data["S2"],
-        data["Rate"],
-    )
-    v_max = params[0]
-    k_m1 = params[1]
-    k_m2 = params[2]
-    print(f"v_max: {v_max}, k_m1: {k_m1}, k_m2: {k_m2}")
+    figures(data)
 
 
 if __name__ == "__main__":
