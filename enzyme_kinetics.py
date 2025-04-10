@@ -278,7 +278,10 @@ def plot_eadie_hofstee(df: pd.DataFrame, save=False) -> None:
     plt.ylabel(r"v (mM/s)")
     plt.title("Eadie-Hofstee Plot")
     plt.legend(loc="upper right")
-    print(pd.DataFrame(km2_results))
+
+    df = pd.DataFrame(km2_results)
+    print(df)
+    df.to_csv("data/km2_results.csv", index=False)
 
     plt.tight_layout()
     if save:
