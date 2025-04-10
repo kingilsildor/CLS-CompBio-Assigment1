@@ -1,0 +1,10 @@
+Sequential Model Results:
+R-squared: 0.9950
+Chi-squared: 0.2317
+Parameters: [0.96499626 0.08075524 0.08151937]
+
+Ping Pong Model Results:
+R-squared: 1.0000
+Chi-squared: 0.0000
+Parameters: [1.  0.1 0.1]
+
