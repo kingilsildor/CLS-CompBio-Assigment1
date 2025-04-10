@@ -274,7 +274,7 @@ def plot_eadie_hofstee(df: pd.DataFrame, save=False) -> None:
             label=f"$-K_{{m1}} = {-K_m1:.2f}$, $V_{{max}} = {V_max:.2f}$",
         )
 
-    plt.xlabel(r"v / [S1] (mM$s^{{-1}}$)")
+    plt.xlabel(r"v / [S1] ($s$)")
     plt.ylabel(r"v (mM/s)")
     plt.title("Eadie-Hofstee Plot")
     plt.legend(loc="upper right")
