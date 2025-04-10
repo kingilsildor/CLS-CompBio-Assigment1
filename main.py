@@ -51,7 +51,7 @@ def chi_squared(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     return np.sum(((y_true - y_pred) ** 2) / y_true)
 
 
-def sequential_model(S: tuple, V_max: float, K_m1: float, K_m2: float) -> float:
+def sequential_model(S: tuple, V_max: float, K_m1: float, K_is1: float) -> float:
     """
     Sequential bisubstrate model for enzyme kinetics.
 
@@ -60,6 +60,29 @@ def sequential_model(S: tuple, V_max: float, K_m1: float, K_m2: float) -> float:
     - S (tuple): Substrate concentrations (S1, S2).
     - V_max (float): Maximum reaction rate.
     - K_m1 (float): Michaelis constant for substrate 1.
+    - K_is1 (float): Inhibition constant for substrate 1.
+
+    Returns
+    -------
+    - float: Reaction rate.
+    """
+    S1, S2 = S
+    v = (V_max * S1 * S2) / (K_is1 * K_m1 + K_m1 * S1 + S1 * S2)
+    return v
+
+
+def sequential_random_model(
+    S: tuple, V_max: float, K_m1: float, K_is1: float, K_m2: float
+) -> float:
+    """
+    Sequential random bisubstrate model for enzyme kinetics.
+
+    Params
+    ------
+    - S (tuple): Substrate concentrations (S1, S2).
+    - V_max (float): Maximum reaction rate.
+    - K_m1 (float): Michaelis constant for substrate 1.
+    - K_is1 (float): Inhibition constant for substrate 1.
     - K_m2 (float): Michaelis constant for substrate 2.
 
     Returns
@@ -67,7 +90,7 @@ def sequential_model(S: tuple, V_max: float, K_m1: float, K_m2: float) -> float:
     - float: Reaction rate.
     """
     S1, S2 = S
-    v = (V_max * S1 * S2) / (K_m1 * K_m2 + K_m2 * S1 + K_m1 * S2 + S1 * S2)
+    v = (V_max * S1 * S2) / (K_is1 * K_m1 + K_m1 * S1 + K_m2 * S2 + S1 * S2)
     return v
 
 
@@ -133,7 +156,7 @@ def fit_sequential_bisubstrate(data: pd.DataFrame, model: callable) -> tuple:
     S = data[["S1", "S2"]].values.T
     rates = data["Rate"].values
 
-    params, _ = curve_fit(model, S, rates)
+    params, _ = curve_fit(model, S, rates, bounds=(-2, 2))
 
     predicted_rates = model(S, *params)
     r2_score = r_squared(rates, predicted_rates)
@@ -156,13 +179,13 @@ def compare_output(tuple_output: tuple, titles: tuple) -> str:
     -------
     - str: The model with the better fit.
     """
-    assert len(tuple_output) == 2, "tuple_output must contain two elements."
+    assert len(tuple_output) == 3, "tuple_output must contain two elements."
 
     with open("data/model_results.txt", "w") as file:
         for output, title in zip(tuple_output, titles):
             file.write(f"{title} Model Results:\n")
-            file.write(f"R-squared: {output[0]:.4f}\n")
-            file.write(f"Chi-squared: {output[1]:.4f}\n")
+            file.write(f"R-squared: {output[0]}\n")
+            file.write(f"Chi-squared: {output[1]}\n")
             file.write(f"Parameters: {output[2]}\n\n")
 
             print(f"{title} Model Results:")
@@ -170,13 +193,17 @@ def compare_output(tuple_output: tuple, titles: tuple) -> str:
             print(f"Chi-squared: {output[1]:.4f}")
             print(f"Parameters: {output[2]}\n")
 
-    seq_output, ping_output = tuple_output
-    if seq_output[0] > ping_output[0] and seq_output[1] < ping_output[1]:
-        return "seq"
-    elif ping_output[0] > seq_output[0] and ping_output[1] < seq_output[1]:
-        return "ping"
-    else:
-        return "Both models are equally good or bad."
+    print(stats_param)
+    data = list(zip(titles, tuple_output))
+    result = None
+
+    for idx, (name, (v1, v2)) in enumerate(data):
+        if all(v1 < other[1][0] for i, other in enumerate(data) if i != idx) and all(
+            v2 > other[1][1] for i, other in enumerate(data) if i != idx
+        ):
+            result = (name, (v1, v2))
+            break
+    print(result)
 
 
 def simulate_data(
@@ -392,10 +419,15 @@ def plot_feasible_region(
 def main():
     #### Q1 ####
     data = pd.read_csv("data/Kinetics.csv")
+    data = data[data["S2"] < 10.0]
 
     seq_output = fit_sequential_bisubstrate(data, sequential_model)
+    seq_rand_output = fit_sequential_bisubstrate(data, sequential_random_model)
     ping_output = fit_sequential_bisubstrate(data, ping_pong_model)
-    model_str = compare_output((seq_output, ping_output), ("Sequential", "Ping Pong"))
+    model_str = compare_output(
+        (seq_output, seq_rand_output, ping_output),
+        ("Sequential", "Random", "Ping Pong"),
+    )
 
     s2_range = [1.5, 2.5, 5.0]
     sim_amount = 100
