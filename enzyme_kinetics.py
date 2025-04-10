@@ -3,7 +3,14 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import curve_fit
 
-FIG_DPI = 300
+FIG_DPI = 400
+FIG_SIZE = (10, 6)
+
+plt.rcParams["axes.titlesize"] = 16
+plt.rcParams["axes.labelsize"] = 14
+plt.rcParams["xtick.labelsize"] = 12
+plt.rcParams["ytick.labelsize"] = 12
+plt.rcParams["legend.fontsize"] = 12
 
 
 def r_squared(y_true, y_pred):
@@ -26,6 +33,17 @@ def ping_pong_model(S, V_max, K_m1, K_m2):
     S1, S2 = S
     v = (V_max * S1 * S2) / (K_m1 * S2 + K_m2 * S1 + S1 * S2)
     return v
+
+
+def calculate_k2(
+    S1,
+    S2,
+    v,
+    V_max,
+    K_m1,
+):
+    K_m2 = (V_max * S1 * S2 - v * K_m1 * S2 - v * S1 * S2) / (v * S1)
+    return K_m2
 
 
 def fit_sequential_bisubstrate(data, model):
@@ -60,47 +78,81 @@ def compare_output(tuple_output, titles):
 def simulate_data(
     model,
     data,
+    s1_original,
     s2_values,
     simulate_amount=100,
 ):
     params, _ = curve_fit(model, (data["S1"], data["S2"]), data["Rate"])
 
-    s1_range = data["S1"].unique()
+    if s1_original:
+        s1_range = data["S1"].unique()
+    else:
+        s1_range = np.linspace(0.1, 10, simulate_amount)
+
     s1_combined = np.tile(s1_range, len(s2_values))
     s2_combined = np.repeat(s2_values, len(s1_range))
 
-    rates = model((s1_combined, s2_combined), *params)
-    simulated_data = pd.DataFrame({"S1": s1_combined, "S2": s2_combined, "Rate": rates})
+    v = model((s1_combined, s2_combined), *params)
+
+    simulated_data = pd.DataFrame(
+        {
+            "S1": s1_combined,
+            "S2": s2_combined,
+            "Rate": v,
+        }
+    )
 
     return simulated_data
 
 
 def plot_eadie_hofstee(df, save=False):
-    constants = {}
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=FIG_SIZE)
+
+    km2_results = []
 
     s2_values = df["S2"].unique()
     for s2 in s2_values:
         df_substrate = df[df["S2"] == s2]
+        S1 = df_substrate["S1"].values
+        v = df_substrate["Rate"].values
+        v_S1 = v / S1
 
-        x = df_substrate["Rate"] / df_substrate["S1"]
-        y = df_substrate["Rate"]
+        K_m1, V_max = np.polyfit(v_S1, v, 1)
 
-        K_m1, v_max = np.polyfit(x, y, 1)
-        constants[s2] = (K_m1, v_max)
+        S1_fixed = 1.0
+        v_fixed = ping_pong_model((S1_fixed, s2), V_max, K_m1, 0.1)
 
-        plt.scatter(x, y, label=f"[S2] = {s2} mM")
-        plt.plot(
-            x,
-            K_m1 * x + v_max,
-            "--",
-            label=f"$K_{{m1}} = {K_m1:.2f}$ mM/s, $v_{{max}} = {v_max:.2f}$ mM/s",
+        K_m2 = calculate_k2(
+            S1_fixed,
+            s2,
+            v_fixed,
+            V_max,
+            K_m1,
+        )
+        km2_results.append(
+            {
+                "S1": S1_fixed,
+                "S2": s2,
+                "v": v_fixed,
+                "V_max": V_max,
+                "K_m1": -K_m1,
+                "K_m2": K_m2,
+            }
         )
 
-    plt.xlabel(r"v / [S1] (mH$^{{-1}}s^{{-1}}$)")
+        plt.scatter(v_S1, v, label=f"[S2] = {s2} mM")
+        plt.plot(
+            v_S1,
+            K_m1 * v_S1 + V_max,
+            "--",
+            label=f"$-K_{{m1}} = {-K_m1:.2f}$, $V_{{max}} = {V_max:.2f}$",
+        )
+
+    plt.xlabel(r"v / [S1] (mM$s^{{-1}}$)")
     plt.ylabel(r"v (mM/s)")
     plt.title("Eadie-Hofstee Plot")
     plt.legend(loc="upper right")
+    print(pd.DataFrame(km2_results))
 
     plt.tight_layout()
     if save:
@@ -109,16 +161,9 @@ def plot_eadie_hofstee(df, save=False):
     else:
         plt.show()
 
-    constants = pd.DataFrame.from_dict(
-        constants, orient="index", columns=["K_m1", "V_max"]
-    )
-    constants.index.name = "S2"
-    constants.reset_index(inplace=True)
-    return constants
-
 
 def plot_lineweaver_burk(df, save=False):
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=FIG_SIZE)
 
     for s2, group in df.groupby("S2"):
         inv_S1 = 1 / group["S1"]
@@ -135,12 +180,6 @@ def plot_lineweaver_burk(df, save=False):
         plt.savefig("results/lineweaver_burk_plot.png", dpi=FIG_DPI)
     else:
         plt.show()
-
-
-def calculate_constants(S2, v, v_max, K_m1):
-    S1 = 1.0
-    K_m2 = (v_max * S1 * S2 - v * K_m1 * S2 - v * S1 * S2) / (v * S1)
-    return K_m2
 
 
 def main():
@@ -164,22 +203,8 @@ def main():
     else:
         raise ValueError("Both models are equally good or bad.")
 
-    df_simulated_data.to_csv("data/simulated_data.csv", index=False)
-
-    constants = plot_eadie_hofstee(df_simulated_data, save=True)
+    plot_eadie_hofstee(df_simulated_data, save=True)
     plot_lineweaver_burk(df_simulated_data, save=True)
-
-    print(df_simulated_data.head())
-
-    for S2 in constants["S2"]:
-        v_max = constants[constants["S2"] == S2]["V_max"].values[0]
-        K_m1 = constants[constants["S2"] == S2]["K_m1"].values[0]
-        # K_m2 = calculate_constants(S2, v, v_max, K_m1)
-        # print(f"S2: {S2} mM")
-        # print(f"v: {v:.4f} mM/s")
-        # print(f"v_max: {v_max:.4f} mM/s")
-        # print(f"K_m1: {K_m1:.4f} mM")
-        # print(f"K_m2: {K_m2:.4f} mM\n")
 
 
 if __name__ == "__main__":
