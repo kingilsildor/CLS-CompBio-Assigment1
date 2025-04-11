@@ -1,15 +1,15 @@
 Sequential Model Results:
-R-squared: 0.9169046108551635
-Chi-squared: 2.4749365108749894
-Parameters: [0.82071285 0.03829849 0.58274656]
+R-squared: 0.9169046108551568
+Chi-squared: 2.4749365138916626
+Parameters: [0.82071285 0.03829849 0.58274654]
 
 Random Model Results:
 R-squared: 1.0
-Chi-squared: 9.844441926737745e-21
-Parameters: [1.00000000e+00 1.00000000e-01 3.99055498e-12 1.00000000e-01]
+Chi-squared: 9.847664477702363e-21
+Parameters: [1.00000000e+00 1.00000000e-01 3.99139567e-12 1.00000000e-01]
 
 Ping Pong Model Results:
 R-squared: 1.0
-Chi-squared: 2.882795220715328e-30
+Chi-squared: 3.1347061282056116e-30
 Parameters: [1.  0.1 0.1]
 

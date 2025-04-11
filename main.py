@@ -1,3 +1,5 @@
+import inspect
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -156,6 +158,7 @@ def fit_sequential_bisubstrate(data: pd.DataFrame, model: callable) -> tuple:
     S = data[["S1", "S2"]].values.T
     rates = data["Rate"].values
 
+    param_count = len(inspect.getfullargspec(model).args) - 1
     params, _ = curve_fit(model, S, rates, bounds=(-2, 2))
 
     predicted_rates = model(S, *params)
@@ -167,13 +170,13 @@ def fit_sequential_bisubstrate(data: pd.DataFrame, model: callable) -> tuple:
 
 def compare_output(tuple_output: tuple, titles: tuple) -> str:
     """
-    Compare the outputs of two models and print the results.
+    Compare the outputs of the models and print the results.
     Save the results to a file and return the model with the better fit.
 
     Params
     ------
-    - tuple_output (tuple): Tuple containing the outputs of the two models.
-    - titles (tuple): Tuple containing the titles of the two models.
+    - tuple_output (tuple): Tuple containing the outputs of the models.
+    - titles (tuple): Tuple containing the titles of the models.
 
     Returns
     -------
@@ -192,17 +195,6 @@ def compare_output(tuple_output: tuple, titles: tuple) -> str:
             print(f"R-squared: {output[0]:.4f}")
             print(f"Chi-squared: {output[1]:.4f}")
             print(f"Parameters: {output[2]}\n")
-
-    # data = list(zip(titles, tuple_output))
-    # result = None
-
-    # for idx, (name, (v1, v2)) in enumerate(data):
-    #     if all(v1 < other[1][0] for i, other in enumerate(data) if i != idx) and all(
-    #         v2 > other[1][1] for i, other in enumerate(data) if i != idx
-    #     ):
-    #         result = (name, (v1, v2))
-    #         break
-    # print(result)
 
 
 def simulate_data(
@@ -227,7 +219,7 @@ def simulate_data(
     -------
     - pd.DataFrame: Simulated data.
     """
-    params, _ = curve_fit(model, (data["S1"], data["S2"]), data["Rate"])
+    params, _ = curve_fit(model, (data["S1"], data["S2"]), data["Rate"], bounds=(-2, 2))
 
     if s1_original:
         s1_range = data["S1"].unique()
@@ -398,12 +390,12 @@ def main():
 
     s2_range = [1.5, 2.5, 5.0]
     sim_amount = 100
-    df_simulated_data = simulate_data(
+    df_ping_sim_data = simulate_data(
         ping_pong_model, data, s2_range, simulate_amount=sim_amount
     )
 
-    plot_eadie_hofstee(df_simulated_data, save=True)
-    plot_lineweaver_burk(df_simulated_data, save=True)
+    plot_eadie_hofstee(df_ping_sim_data, save=True)
+    plot_lineweaver_burk(df_ping_sim_data, save=True)
 
 
 if __name__ == "__main__":
