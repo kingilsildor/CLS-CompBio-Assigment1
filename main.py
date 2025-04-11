@@ -193,17 +193,16 @@ def compare_output(tuple_output: tuple, titles: tuple) -> str:
             print(f"Chi-squared: {output[1]:.4f}")
             print(f"Parameters: {output[2]}\n")
 
-    print(stats_param)
-    data = list(zip(titles, tuple_output))
-    result = None
+    # data = list(zip(titles, tuple_output))
+    # result = None
 
-    for idx, (name, (v1, v2)) in enumerate(data):
-        if all(v1 < other[1][0] for i, other in enumerate(data) if i != idx) and all(
-            v2 > other[1][1] for i, other in enumerate(data) if i != idx
-        ):
-            result = (name, (v1, v2))
-            break
-    print(result)
+    # for idx, (name, (v1, v2)) in enumerate(data):
+    #     if all(v1 < other[1][0] for i, other in enumerate(data) if i != idx) and all(
+    #         v2 > other[1][1] for i, other in enumerate(data) if i != idx
+    #     ):
+    #         result = (name, (v1, v2))
+    #         break
+    # print(result)
 
 
 def simulate_data(
@@ -251,6 +250,52 @@ def simulate_data(
     return simulated_data
 
 
+def fit_k2(
+    km2_results: list,
+    S2: float,
+    V_max: float,
+    K_m1: float,
+    S1: float = 1.0,
+    K_m2: float = 0.1,
+) -> list:
+    """
+    Fit K_m2 using the ping-pong model.
+
+    Params
+    ------
+    - km2_results (list): List to store the results.
+    - S2 (float): Concentration of substrate 2.
+    - V_max (float): Maximum reaction rate.
+    - K_m1 (float): Michaelis constant for substrate 1.
+    - S1 (float): Concentration of substrate 1. Default is 1.0.
+    - K_m2 (float): Initial Michaelis constant for substrate 2. Default is 0.1.
+
+    Returns
+    -------
+    - list: Updated km2_results with the fitted K_m2 values.
+    """
+    v_fixed = ping_pong_model((S1, S2), V_max, K_m1, K_m2)
+
+    K_m2 = calculate_k2(
+        S1,
+        S2,
+        v_fixed,
+        V_max,
+        K_m1,
+    )
+    km2_results.append(
+        {
+            "S1": S1,
+            "S2": S2,
+            "v": v_fixed,
+            "V_max": V_max,
+            "K_m1": -K_m1,
+            "K_m2": K_m2,
+        }
+    )
+    return km2_results
+
+
 def plot_eadie_hofstee(df: pd.DataFrame, save=False) -> None:
     """
     Plot the Eadie-Hofstee plot for the given data.
@@ -263,37 +308,17 @@ def plot_eadie_hofstee(df: pd.DataFrame, save=False) -> None:
     plt.figure(figsize=FIG_SIZE)
     km2_results = []
 
-    s2_values = df["S2"].unique()
-    for s2 in s2_values:
-        df_substrate = df[df["S2"] == s2]
+    S2_values = df["S2"].unique()
+    for S2 in S2_values:
+        df_substrate = df[df["S2"] == S2]
         S1 = df_substrate["S1"].values
         v = df_substrate["Rate"].values
         v_S1 = v / S1
 
         K_m1, V_max = np.polyfit(v_S1, v, 1)
+        km2_results = fit_k2(km2_results, S2, V_max, K_m1)
 
-        S1_fixed = 1.0
-        v_fixed = ping_pong_model((S1_fixed, s2), V_max, K_m1, 0.1)
-
-        K_m2 = calculate_k2(
-            S1_fixed,
-            s2,
-            v_fixed,
-            V_max,
-            K_m1,
-        )
-        km2_results.append(
-            {
-                "S1": S1_fixed,
-                "S2": s2,
-                "v": v_fixed,
-                "V_max": V_max,
-                "K_m1": -K_m1,
-                "K_m2": K_m2,
-            }
-        )
-
-        plt.scatter(v_S1, v, label=f"[S2] = {s2} mM")
+        plt.scatter(v_S1, v, label=f"[S2] = {S2} mM")
         plt.plot(
             v_S1,
             K_m1 * v_S1 + V_max,
@@ -332,7 +357,18 @@ def plot_lineweaver_burk(df: pd.DataFrame, save=False) -> None:
     for s2, group in df.groupby("S2"):
         inv_S1 = 1 / group["S1"]
         inv_Rate = 1 / group["Rate"]
-        plt.plot(inv_S1, inv_Rate, "o-", label=f"[S2] = {s2} mM")
+
+        slope, intercept = np.polyfit(inv_S1, inv_Rate, 1)
+        y_fit = slope * inv_S1 + intercept
+
+        plt.plot(inv_S1, inv_Rate, "o", label=f"[S2] = {s2} mM")
+        plt.plot(
+            inv_S1,
+            y_fit,
+            "-",
+            label=f"1/v = ${intercept:.2f} + {slope:.2f}\\cdot$1/[S1]",
+            color=plt.gca().lines[-1].get_color(),
+        )
 
     plt.xlabel(r"1/[S1] (mM$^{{-1}})$")
     plt.ylabel(r"1/v (s/mM)")
@@ -347,75 +383,6 @@ def plot_lineweaver_burk(df: pd.DataFrame, save=False) -> None:
         plt.show()
 
 
-def plot_feasible_region(
-    v6_max: float,
-    vmax: float,
-    succ: float,
-    fum: float,
-    km: float,
-    d_target: float,
-    save=False,
-) -> None:
-    """
-    Plot the feasible region for the given parameters.
-
-    Params
-    ------
-    - v6_max (float): Maximum reaction rate for the sixth reaction.
-    - vmax (float): Maximum reaction rate for the first reaction.
-    - succ (float): Concentration of succinate.
-    - fum (float): Concentration of fumarate.
-    - km (float): Michaelis constant.
-    - d_target (float): Target difference between v1 and v6.
-    - save (bool): Whether to save the plot. Default is False.
-    """
-    v6_MM = vmax * (succ / (km + succ)) - vmax * (fum / (km + fum))
-    v6_effective = min(v6_MM, v6_max)
-
-    v1_values = np.linspace(0, v6_effective, 100)
-    v6_diagonal = v1_values.copy()
-
-    v6_horizontal = v6_effective * np.ones_like(v1_values)
-
-    d_line = d_target + v1_values
-
-    plt.figure(figsize=FIG_SIZE)
-    plt.plot(v1_values, v6_diagonal, "r--", linewidth=2, label=r"$v_6 = v_1$")
-    plt.plot(
-        v1_values,
-        v6_horizontal,
-        "b-",
-        linewidth=2,
-        label=r"$v_6 \leq v_{6,\max}$",
-    )
-    plt.fill_between(
-        v1_values,
-        v6_diagonal,
-        v6_horizontal,
-        color="gray",
-        alpha=0.3,
-        label=r"Feasible Region: $v_1 < v_6 \leq$ $v_{6,max}$",
-    )
-    plt.plot(
-        v1_values, d_line, "m-", linewidth=2, label=r"$v_6 = v_1 + D_{\rm target}$"
-    )
-
-    plt.xlabel(r"$v_1$")
-    plt.ylabel(r"$v_6$")
-    plt.title("Solution Space in ($v_1$, $v_6$)")
-    plt.xlim(0, v6_effective + 0.5)
-    plt.ylim(0, v6_effective + 0.5)
-    plt.grid()
-    plt.legend()
-
-    plt.tight_layout()
-    if save:
-        plt.savefig("results/feasible_region.png", dpi=FIG_DPI)
-        plt.close()
-    else:
-        plt.show()
-
-
 def main():
     #### Q1 ####
     data = pd.read_csv("data/Kinetics.csv")
@@ -424,32 +391,19 @@ def main():
     seq_output = fit_sequential_bisubstrate(data, sequential_model)
     seq_rand_output = fit_sequential_bisubstrate(data, sequential_random_model)
     ping_output = fit_sequential_bisubstrate(data, ping_pong_model)
-    model_str = compare_output(
+    compare_output(
         (seq_output, seq_rand_output, ping_output),
         ("Sequential", "Random", "Ping Pong"),
     )
 
     s2_range = [1.5, 2.5, 5.0]
     sim_amount = 100
-
-    if model_str == "seq":
-        df_simulated_data = simulate_data(
-            sequential_model, data, s2_range, simulate_amount=sim_amount
-        )
-    elif model_str == "ping":
-        df_simulated_data = simulate_data(
-            ping_pong_model, data, s2_range, simulate_amount=sim_amount
-        )
-    else:
-        raise ValueError("Both models are equally good or bad.")
+    df_simulated_data = simulate_data(
+        ping_pong_model, data, s2_range, simulate_amount=sim_amount
+    )
 
     plot_eadie_hofstee(df_simulated_data, save=True)
     plot_lineweaver_burk(df_simulated_data, save=True)
-
-    #### Q2 ####
-    plot_feasible_region(
-        v6_max=10.0, vmax=12.0, succ=5.0, fum=1.0, km=6.0, d_target=1.0, save=True
-    )
 
 
 if __name__ == "__main__":
