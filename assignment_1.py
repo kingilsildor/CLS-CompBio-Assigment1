@@ -376,7 +376,6 @@ def plot_lineweaver_burk(df: pd.DataFrame, save=False) -> None:
 
 
 def main():
-    #### Q1 ####
     data = pd.read_csv("data/Kinetics.csv")
     data = data[data["S2"] < 10.0]
 
