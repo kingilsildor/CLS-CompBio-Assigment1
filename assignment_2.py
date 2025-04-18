@@ -35,6 +35,29 @@ def solve_ode_system(t_max, delta_t, init_pop, alpha, beta, gamma, delta):
     return sol
 
 
+def create_grid(min_val, max_val, num_points):
+    x = np.linspace(min_val, max_val, num_points)
+    y = np.linspace(min_val, max_val, num_points)
+    X, Y = np.meshgrid(x, y)
+    return X, Y
+
+
+def plot_phase_portrait(X, Y, alpha, beta, gamma, delta):
+    U = metabolite_model(X, Y, alpha, beta)
+    V = enzyme_model(X, Y, gamma, delta)
+
+    plt.streamplot(X, Y, U, V, color="gray", linewidth=1, arrowsize=1.5)
+    plt.xlabel("Metabolite Concentration ($x$)")
+    plt.ylabel("Enzyme Concentration ($y$)")
+    plt.plot(gamma / delta, alpha / beta, "ro", markersize=8, label="Equilibrium")
+    # plt.axhline(0, color="r", linestyle="--", label="$dx/dt=0$")
+    # plt.axvline(0, color="b", linestyle="--", label="$dy/dt=0$")
+
+    plt.title("Phase Portrait of Metabolite-Enzyme System")
+    plt.legend()
+    plt.show()
+
+
 def plot_ode_solution(sol):
     x = sol.y[0]
     y = sol.y[1]
@@ -49,16 +72,19 @@ def plot_ode_solution(sol):
 
 
 def main():
-    sol = solve_ode_system(
-        t_max=10,
-        delta_t=0.1,
-        init_pop=(1, 0.5),
-        alpha=2,
-        beta=1.1,
-        gamma=1,
-        delta=0.9,
-    )
-    plot_ode_solution(sol)
+    # sol = solve_ode_system(
+    #     t_max=10,
+    #     delta_t=0.1,
+    #     init_pop=(1, 0.5),
+    #     alpha=2,
+    #     beta=1.1,
+    #     gamma=1,
+    #     delta=0.9,
+    # )
+    # plot_ode_solution(sol)
+
+    X, Y = create_grid(0, 5, 20)
+    plot_phase_portrait(X, Y, alpha=2, beta=1.1, gamma=1, delta=0.9)
 
 
 if __name__ == "__main__":
