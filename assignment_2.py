@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.integrate import solve_ivp
 from scipy.integrate._ivp.ivp import OdeResult
+import os
 
 ######## Setup Plotting Sytle ############
 FIG_DPI = 400
@@ -161,6 +162,8 @@ def plot_phase_portrait(X: np.ndarray, Y: np.ndarray, alpha: float, beta: float,
 
     plt.tight_layout()
     if save:
+        if not os.path.exists("results"):
+            os.makedirs("results")
         plt.savefig("results/phase_plot.png", dpi=FIG_DPI)
         plt.close()
     else:
@@ -191,6 +194,8 @@ def plot_ode_solution(sol: OdeResult, save=False) -> None:
 
     plt.tight_layout()
     if save:
+        if not os.path.exists("results"):
+            os.makedirs("results")
         plt.savefig("results/ode_solution_plot.png", dpi=FIG_DPI)
         plt.close()
     else:
@@ -210,10 +215,10 @@ def main():
         gamma=1,
         delta=0.9,
     )
-    plot_ode_solution(sol, save=True)
+    plot_ode_solution(sol)
 
     X, Y = create_grid(-0.5, 2.5, 20)
-    plot_phase_portrait(X, Y, alpha=2, beta=1.1, gamma=1, delta=0.9, save=True)
+    plot_phase_portrait(X, Y, alpha=2, beta=1.1, gamma=1, delta=0.9)
 
 
 if __name__ == "__main__":
