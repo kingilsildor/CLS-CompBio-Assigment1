@@ -236,7 +236,7 @@ def plot_mRNA_concentrations_solution(sol: OdeResult, save=False) -> None:
     if save:
         if not os.path.exists("results"):
             os.makedirs("results")
-        plt.savefig("results/protein_phase_plane.png", dpi=FIG_DPI)
+        plt.savefig("results/mrna_time_evolution.png", dpi=FIG_DPI)
         plt.close()
     else:
         plt.show()
@@ -259,6 +259,7 @@ def plot_protein_dynamics_solution(sol: OdeResult, save=False) -> None:
     plt.plot(Protein_A, Protein_B, 'g-')
     plt.plot(Protein_A[0], Protein_B[0], 'go', label='Start')  # Start point
     plt.plot(Protein_A[-1], Protein_B[-1], 'ro', label='End')  # End point
+  
     plt.xlabel('Protein A Concentration (M)')
     plt.ylabel('Protein B Concentration (M)')
     plt.title('Phase-Plane Plot of Protein A vs Protein B')
