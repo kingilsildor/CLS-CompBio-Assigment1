@@ -68,6 +68,9 @@ def simualate_gene_network(num_simulations: int, N: int, dt: float, params: dict
             dB_1B = np.random.normal(0, np.sqrt(dt))
             dB_2B = np.random.normal(0, np.sqrt(dt))
 
+            alphaA = params["c_A"] / (1 + np.exp(-params["b_A"] * (t - params["a_A"])))
+            alphaB = params["c_B"] / (1 + np.exp(-params["b_B"] * (t - params["a_B"])))
+
             betaA_crit = params["beta_A"] * (
                 (P_b[t - 1] ** params["n_a"])
                 / (params["theta_A"] ** params["n_a"] + P_b[t - 1] ** params["n_a"])
@@ -79,12 +82,12 @@ def simualate_gene_network(num_simulations: int, N: int, dt: float, params: dict
 
             U_b[t] = (
                 U_b[t - 1]
-                + (params["a_B"] - betaB_crit * U_b[t - 1]) * dt
+                + (alphaB - betaB_crit * U_b[t - 1]) * dt
                 + params["var_1b"] * dB_1B
             )
             U_a[t] = (
                 U_a[t - 1]
-                + (params["a_A"] - betaA_crit * U_a[t - 1]) * dt
+                + (alphaA - betaA_crit * U_a[t - 1]) * dt
                 + params["var_1a"] * dB_1A
             )
 
