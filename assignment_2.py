@@ -1,8 +1,9 @@
+import os
+
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.integrate import solve_ivp
 from scipy.integrate._ivp.ivp import OdeResult
-import os
 
 ######## Setup Plotting Sytle ############
 FIG_DPI = 400
@@ -15,8 +16,11 @@ plt.rcParams["xtick.labelsize"] = 12
 plt.rcParams["ytick.labelsize"] = 12
 plt.rcParams["legend.fontsize"] = 12
 
+
 ##########################################
-def simualate_gene_network(num_simulations: int, N: int, dt: float, params: dict, initial_conditions: dict) -> tuple:
+def simualate_gene_network(
+    num_simulations: int, N: int, dt: float, params: dict, initial_conditions: dict
+) -> tuple:
     """
     Simulate the gene network using the Euler-Maruyama method.
 
@@ -120,6 +124,7 @@ def simualate_gene_network(num_simulations: int, N: int, dt: float, params: dict
 
     return U_a_total, U_b_total, P_a_total, P_b_total, S_a_total, S_b_total
 
+
 def hill_function(x: float, theta: float, n: int) -> float:
     """
     Hill function for gene regulation.
@@ -134,7 +139,8 @@ def hill_function(x: float, theta: float, n: int) -> float:
     ----------
     - float: Value of the Hill function.
     """
-    return (x ** n) / (theta ** n + x ** n)
+    return (x**n) / (theta**n + x**n)
+
 
 def gene_regulation_ode(t: float, pop: np.ndarray, params: list) -> list:
     """
@@ -150,7 +156,20 @@ def gene_regulation_ode(t: float, pop: np.ndarray, params: list) -> list:
     ----------
     - list: List containing the rate of change of mRNA and protein concentrations.
     """
-    m_A, m_B, gamma_A, gamma_B, k_PA, k_PB, theta_A, theta_B, n_A, n_B, delta_PA, delta_PB = params
+    (
+        m_A,
+        m_B,
+        gamma_A,
+        gamma_B,
+        k_PA,
+        k_PB,
+        theta_A,
+        theta_B,
+        n_A,
+        n_B,
+        delta_PA,
+        delta_PB,
+    ) = params
     mRNA_A, mRNA_B, Protein_A, Protein_B = pop
 
     hill_A = hill_function(Protein_A, theta_A, n_A)
@@ -158,7 +177,7 @@ def gene_regulation_ode(t: float, pop: np.ndarray, params: list) -> list:
 
     # Protein A inhibits gene B transcription
     dmRNA_A_dt = m_A * hill_B - gamma_A * mRNA_A
-    inhibition_A = theta_A ** n_A / (theta_A ** n_A + Protein_A ** n_A)
+    inhibition_A = theta_A**n_A / (theta_A**n_A + Protein_A**n_A)
     # Protein B activates gene A transcription
     dmRNA_B_dt = m_B * inhibition_A - gamma_B * mRNA_B
     dProtein_A_dt = k_PA * mRNA_A - delta_PA * Protein_A
@@ -189,7 +208,9 @@ def metabolite_ode(t: float, pop: np.ndarray, params: list) -> list:
     return [metabolite_cst, enzyme_cst]
 
 
-def solve_ode_system(model: callable, t_max: float, delta_t: float, init_pop: list, params: list) -> OdeResult:
+def solve_ode_system(
+    model: callable, t_max: float, delta_t: float, init_pop: list, params: list
+) -> OdeResult:
     """
     Solve the ODE system using the Runge-Kutta method.
 
@@ -208,13 +229,7 @@ def solve_ode_system(model: callable, t_max: float, delta_t: float, init_pop: li
     t_span = np.linspace(0, t_max, int(t_max / delta_t) + 1)
 
     sol = solve_ivp(
-        model,
-        [0, t_max],
-        init_pop,
-        args=(params,),
-        t_eval=t_span,
-        rtol=1e-6,
-        atol=1e-9
+        model, [0, t_max], init_pop, args=(params,), t_eval=t_span, rtol=1e-6, atol=1e-9
     )
     return sol
 
@@ -239,8 +254,17 @@ def create_grid(min_val: float, max_val: float, num_points: int) -> tuple:
     X, Y = np.meshgrid(x, y)
     return X, Y
 
+
 ######## Plotting Functions ############
-def plot_phase_portrait(X: np.ndarray, Y: np.ndarray, alpha: float, beta: float, gamma: float, delta: float, save=False) -> None:
+def plot_phase_portrait(
+    X: np.ndarray,
+    Y: np.ndarray,
+    alpha: float,
+    beta: float,
+    gamma: float,
+    delta: float,
+    save=False,
+) -> None:
     """
     Plot the phase portrait of the metabolite-enzyme system.
 
@@ -262,7 +286,13 @@ def plot_phase_portrait(X: np.ndarray, Y: np.ndarray, alpha: float, beta: float,
     plt.streamplot(X, Y, U, V, color="gray", linewidth=1, arrowsize=0.5)
     plt.xlabel("Metabolite (x) Concentration (M)")
     plt.ylabel("Enzyme (y) Concentration (M)")
-    plt.plot(gamma / delta, alpha / beta, "ro", markersize=8, label=r"Equilibrium = $\left(\frac{\gamma}{\delta}, \frac{\alpha}{\beta}\right)$")
+    plt.plot(
+        gamma / delta,
+        alpha / beta,
+        "ro",
+        markersize=8,
+        label=r"Equilibrium = $\left(\frac{\gamma}{\delta}, \frac{\alpha}{\beta}\right)$",
+    )
     print(f"Equilibrium point: ({gamma / delta:.2f}, {alpha / beta:.2f})")
     plt.axhline(0, color="r", linestyle="--", label="$dx/dt=0$")
     plt.axvline(0, color="b", linestyle="--", label="$dy/dt=0$")
@@ -297,8 +327,8 @@ def plot_ode_solution(sol: OdeResult, save=False) -> None:
 
     plt.plot(t, x, label="Metabolite")
     plt.plot(t, y, label="Enzyme")
-    plt.xlabel('Time (s)')
-    plt.ylabel('Concentration (M)')
+    plt.xlabel("Time (s)")
+    plt.ylabel("Concentration (M)")
     plt.title("Metabolite and Enzyme Concentrations Over Time")
     plt.legend()
     plt.grid()
@@ -311,6 +341,7 @@ def plot_ode_solution(sol: OdeResult, save=False) -> None:
         plt.close()
     else:
         plt.show()
+
 
 def plot_mRNA_concentrations_solution(sol: OdeResult, save=False) -> None:
     """
@@ -327,11 +358,11 @@ def plot_mRNA_concentrations_solution(sol: OdeResult, save=False) -> None:
     mRNA_B = sol.y[1]
     t = sol.t
 
-    plt.plot(t, mRNA_A, 'b-', label='mRNA A')
-    plt.plot(t, mRNA_B, 'r-', label='mRNA B')
-    plt.xlabel('Time (s)')
-    plt.ylabel('Concentration (M)')
-    plt.title('Time Evolution of mRNA A and mRNA B Concentrations')
+    plt.plot(t, mRNA_A, "b-", label="mRNA A")
+    plt.plot(t, mRNA_B, "r-", label="mRNA B")
+    plt.xlabel("Time (s)")
+    plt.ylabel("Concentration (M)")
+    plt.title("Time Evolution of mRNA A and mRNA B Concentrations")
     plt.legend()
     plt.grid()
 
@@ -343,6 +374,7 @@ def plot_mRNA_concentrations_solution(sol: OdeResult, save=False) -> None:
         plt.close()
     else:
         plt.show()
+
 
 def plot_protein_dynamics_solution(sol: OdeResult, save=False) -> None:
     """
@@ -359,13 +391,13 @@ def plot_protein_dynamics_solution(sol: OdeResult, save=False) -> None:
     Protein_B = sol.y[3]
     t = sol.t
 
-    plt.plot(Protein_A, Protein_B, 'g-')
-    plt.plot(Protein_A[0], Protein_B[0], 'go', label='Start')  # Start point
-    plt.plot(Protein_A[-1], Protein_B[-1], 'ro', label='End')  # End point
-  
-    plt.xlabel('Protein A Concentration (M)')
-    plt.ylabel('Protein B Concentration (M)')
-    plt.title('Phase-Plane Plot of Protein A vs Protein B')
+    plt.plot(Protein_A, Protein_B, "g-")
+    plt.plot(Protein_A[0], Protein_B[0], "go", label="Start")  # Start point
+    plt.plot(Protein_A[-1], Protein_B[-1], "ro", label="End")  # End point
+
+    plt.xlabel("Protein A Concentration (M)")
+    plt.ylabel("Protein B Concentration (M)")
+    plt.title("Phase-Plane Plot of Protein A vs Protein B")
     plt.legend()
     plt.grid()
 
@@ -378,7 +410,16 @@ def plot_protein_dynamics_solution(sol: OdeResult, save=False) -> None:
     else:
         plt.show()
 
-def plot_stochastic_mrna(S_a: np.ndarray, S_b: np.ndarray, S_a_std: np.ndarray, S_b_std: np.ndarray, T: float, N: int, save=False) -> None:
+
+def plot_stochastic_mrna(
+    S_a: np.ndarray,
+    S_b: np.ndarray,
+    S_a_std: np.ndarray,
+    S_b_std: np.ndarray,
+    T: float,
+    N: int,
+    save=False,
+) -> None:
     """
     Plot the stochastic mRNA concentrations.
     Params
@@ -415,14 +456,17 @@ def plot_stochastic_mrna(S_a: np.ndarray, S_b: np.ndarray, S_a_std: np.ndarray, 
     else:
         plt.show()
 
-def plot_stochastic_protein(P_a: np.ndarray, P_b: np.ndarray, P_b_std: np.ndarray, save=False) -> None:
+
+def plot_stochastic_protein(
+    P_a: np.ndarray, P_b: np.ndarray, P_b_std: np.ndarray, save=False
+) -> None:
     plt.figure(figsize=STRD_FIG_SIZE)
 
     plt.plot(P_a, P_b, label="Protein A vs Protein B", color="green")
     plt.fill_between(P_a, P_b - P_b_std, P_b + P_b_std, color="green", alpha=0.2)
     plt.plot(P_a[0], P_b[0], marker="o", color="red", label="Initial Condition")
     plt.plot(P_a[-1], P_b[-1], marker="o", color="black", label="Final Condition")
-    
+
     plt.xlim(0.4, 1.5)
     plt.ylim(0, 1)
 
@@ -441,6 +485,7 @@ def plot_stochastic_protein(P_a: np.ndarray, P_b: np.ndarray, P_b_std: np.ndarra
     else:
         plt.show()
 
+
 ###########################################
 def main(SAVING: bool = False) -> None:
     dt = 0.01
@@ -458,21 +503,16 @@ def main(SAVING: bool = False) -> None:
         "n_A": 3,
         "n_B": 3,
         "delta_PA": 1,
-        "delta_PB": 1
+        "delta_PB": 1,
     }
-    init_pop = {
-        "mRNA_A": 0.8,
-        "mRNA_B": 0.8,
-        "Protein_A": 0.8,
-        "Protein_B": 0.8
-    }
-    
+    init_pop = {"mRNA_A": 0.8, "mRNA_B": 0.8, "Protein_A": 0.8, "Protein_B": 0.8}
+
     sol = solve_ode_system(
         model=gene_regulation_ode,
         t_max=100,
         delta_t=dt,
         init_pop=(list(init_pop.values())),
-        params=(list(params_dict.values()))
+        params=(list(params_dict.values())),
     )
     plot_mRNA_concentrations_solution(sol, save=SAVING)
     plot_protein_dynamics_solution(sol, save=SAVING)
@@ -503,7 +543,6 @@ def main(SAVING: bool = False) -> None:
         "var_2a": 0.05,
         "var_1b": 0.05,
         "var_2b": 0.05,
-
     }
     init_pop = {
         "U_a": 0.8,
@@ -519,8 +558,8 @@ def main(SAVING: bool = False) -> None:
 
     num_simulations = 1000
 
-    _, _, P_a_total, P_b_total, S_a_total, S_b_total = (
-        simualate_gene_network(num_simulations, N, dt, params_dict, init_pop)
+    _, _, P_a_total, P_b_total, S_a_total, S_b_total = simualate_gene_network(
+        num_simulations, N, dt, params_dict, init_pop
     )
     S_a_mean = np.mean(S_a_total, axis=0)
     S_b_mean = np.mean(S_b_total, axis=0)
@@ -530,12 +569,10 @@ def main(SAVING: bool = False) -> None:
     P_b_std = np.std(P_b_total, axis=0)
     S_a_std = np.std(S_a_total, axis=0)
     S_b_std = np.std(S_b_total, axis=0)
-    print(S_a_mean, S_b_mean)
-    print(S_a_std, S_b_std)
 
     plot_stochastic_mrna(S_a_mean, S_b_mean, S_a_std, S_b_std, T, N, save=SAVING)
     plot_stochastic_protein(P_a_mean, P_b_mean, P_b_std, save=SAVING)
-    
+
     ################### Question 2 ###################
     params_dict = {
         "alpha": 2,
@@ -543,17 +580,14 @@ def main(SAVING: bool = False) -> None:
         "gamma": 1,
         "delta": 0.9,
     }
-    init_pop = {
-        "metabolite": 1,
-        "enzyme": 0.5
-    }
+    init_pop = {"metabolite": 1, "enzyme": 0.5}
 
     sol = solve_ode_system(
         model=metabolite_ode,
         t_max=10,
         delta_t=dt,
         init_pop=(list(init_pop.values())),
-        params=(list(params_dict.values()))
+        params=(list(params_dict.values())),
     )
     plot_ode_solution(sol, save=SAVING)
 
