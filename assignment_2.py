@@ -19,7 +19,12 @@ plt.rcParams["legend.fontsize"] = 12
 
 ##########################################
 def simualate_gene_network(
-    num_simulations: int, N: int, dt: float, params: dict, initial_conditions: dict
+    num_simulations: int,
+    N: int,
+    T: int,
+    dt: float,
+    params: dict,
+    initial_conditions: dict,
 ) -> tuple:
     """
     Simulate the gene network using the Euler-Maruyama method.
@@ -64,6 +69,7 @@ def simualate_gene_network(
         S_a[0] = initial_conditions["S_a"]
         S_b[0] = initial_conditions["S_b"]
 
+        time = np.linspace(0, T, N)
         for t in range(1, N):
             # Euler-Maruyama method
 
@@ -72,16 +78,20 @@ def simualate_gene_network(
             dB_1B = np.random.normal(0, np.sqrt(dt))
             dB_2B = np.random.normal(0, np.sqrt(dt))
 
-            alphaA = params["c_A"] / (1 + np.exp(-params["b_A"] * (t - params["a_A"])))
-            alphaB = params["c_B"] / (1 + np.exp(-params["b_B"] * (t - params["a_B"])))
+            alphaA = params["c_A"] / (
+                1 + np.exp(np.multiply(params["b_A"], (time[t - 1] - params["a_A"])))
+            )
+            alphaB = params["c_B"] / (
+                1 + np.exp(np.multiply(params["b_B"], (time[t - 1] - params["a_B"])))
+            )
 
             betaA_crit = params["beta_A"] * (
-                (P_b[t - 1] ** params["n_a"])
-                / (params["theta_A"] ** params["n_a"] + P_b[t - 1] ** params["n_a"])
+                (P_b[t - 1] ** params["n_b"])
+                / (params["theta_B"] ** params["n_b"] + P_b[t - 1] ** params["n_b"])
             )
             betaB_crit = params["beta_B"] * (
-                (params["theta_B"] ** params["n_b"])
-                / (params["theta_B"] ** params["n_b"] + P_a[t - 1] ** params["n_b"])
+                (params["theta_A"] ** params["n_a"])
+                / (params["theta_A"] ** params["n_a"] + P_a[t - 1] ** params["n_a"])
             )
 
             U_b[t] = (
@@ -416,6 +426,10 @@ def plot_stochastic_mrna(
     S_b: np.ndarray,
     S_a_std: np.ndarray,
     S_b_std: np.ndarray,
+    U_a: np.ndarray,
+    U_b: np.ndarray,
+    U_a_std: np.ndarray,
+    U_b_std: np.ndarray,
     T: float,
     N: int,
     save=False,
@@ -433,20 +447,27 @@ def plot_stochastic_mrna(
     - save (bool): If True, save the plot to a file. Default is False.
     """
     t = np.linspace(0, T, N)
-
     plt.figure(figsize=STRD_FIG_SIZE)
 
-    plt.plot(t, S_a, label="mRNA A", color="blue")
+    plt.figure(figsize=(6, 5))
+    plt.plot(t, S_a, label="Mean mature mRNA A", color="blue")
     plt.fill_between(t, S_a - S_a_std, S_a + S_a_std, color="blue", alpha=0.2)
-    plt.plot(t, S_b, label="mRNA B", color="orange")
+    plt.plot(t, U_a, label="Mean pre-mRNA A", color="purple")
+    plt.fill_between(t, U_a - U_a_std, U_a + U_a_std, color="purple", alpha=0.2)
+    plt.plot(t, U_b, label="Mean pre-mRNA B", color="red")
+    plt.fill_between(t, U_b - U_b_std, U_b + U_b_std, color="red", alpha=0.2)
+    plt.plot(t, S_b, label="Mean mature mRNA B", color="orange")
     plt.fill_between(t, S_b - S_b_std, S_b + S_b_std, color="orange", alpha=0.2)
-
-    plt.title("mRNA A and B")
-    plt.xlabel("Time (s)")
-    plt.ylabel("Concentration (M)")
-    plt.legend()
-    plt.grid()
-
+    plt.suptitle(
+        "pre-mRNA and mRNA concentrations\n of genes A and B",
+        fontsize=16,
+        fontweight="bold",
+    )
+    plt.xlabel("Time (s)", fontsize=14)
+    plt.ylabel("Concentration (M)", fontsize=14)
+    # plt.ylim(0, 3.5)
+    plt.grid(True)
+    plt.legend(fontsize=11)
     plt.tight_layout()
     if save:
         if not os.path.exists("results"):
@@ -458,24 +479,30 @@ def plot_stochastic_mrna(
 
 
 def plot_stochastic_protein(
-    P_a: np.ndarray, P_b: np.ndarray, P_b_std: np.ndarray, save=False
+    P_a: np.ndarray,
+    P_b: np.ndarray,
+    P_b_std: np.ndarray,
+    P_a_total: np.ndarray,
+    P_b_total: np.ndarray,
+    num_simulations,
+    save=False,
 ) -> None:
     plt.figure(figsize=STRD_FIG_SIZE)
 
-    plt.plot(P_a, P_b, label="Protein A vs Protein B", color="green")
-    plt.fill_between(P_a, P_b - P_b_std, P_b + P_b_std, color="green", alpha=0.2)
+    num_to_plot = 30
+    selected_indices = np.random.choice(num_simulations, num_to_plot, replace=False)
+
+    for i in selected_indices:
+        plt.plot(P_a_total[i], P_b_total[i], color="green", alpha=0.05)
+
+    plt.plot(P_a, P_b, label="Mean Protein A vs Protein B", color="green")
     plt.plot(P_a[0], P_b[0], marker="o", color="red", label="Initial Condition")
     plt.plot(P_a[-1], P_b[-1], marker="o", color="black", label="Final Condition")
-
-    plt.xlim(0.4, 1.5)
-    plt.ylim(0, 1)
-
-    plt.title("Phase space of protein A and B")
-    plt.xlabel("Protein A (M)")
-    plt.ylabel("Protein B (M)")
-    plt.legend()
-    plt.grid()
-
+    plt.suptitle("Phase space of protein A and B", fontsize=16, fontweight="bold")
+    plt.xlabel("Protein A (M)", fontsize=14)
+    plt.ylabel("Protein B (M)", fontsize=14)
+    plt.grid(True)
+    plt.legend(fontsize=11)
     plt.tight_layout()
     if save:
         if not os.path.exists("results"):
@@ -556,22 +583,40 @@ def main(SAVING: bool = False) -> None:
     T = 100
     N = int(T / dt)
 
-    num_simulations = 1000
+    num_simulations = 100
 
-    _, _, P_a_total, P_b_total, S_a_total, S_b_total = simualate_gene_network(
-        num_simulations, N, dt, params_dict, init_pop
+    U_a_total, U_b_total, P_a_total, P_b_total, S_a_total, S_b_total = (
+        simualate_gene_network(num_simulations, N, T, dt, params_dict, init_pop)
     )
     S_a_mean = np.mean(S_a_total, axis=0)
     S_b_mean = np.mean(S_b_total, axis=0)
     P_a_mean = np.mean(P_a_total, axis=0)
     P_b_mean = np.mean(P_b_total, axis=0)
+    U_a_mean = np.mean(U_a_total, axis=0)
+    U_b_mean = np.mean(U_b_total, axis=0)
 
+    U_a_std = np.std(U_a_total, axis=0)
+    U_b_std = np.std(U_b_total, axis=0)
     P_b_std = np.std(P_b_total, axis=0)
     S_a_std = np.std(S_a_total, axis=0)
     S_b_std = np.std(S_b_total, axis=0)
 
-    plot_stochastic_mrna(S_a_mean, S_b_mean, S_a_std, S_b_std, T, N, save=SAVING)
-    plot_stochastic_protein(P_a_mean, P_b_mean, P_b_std, save=SAVING)
+    plot_stochastic_mrna(
+        S_a_mean,
+        S_b_mean,
+        S_a_std,
+        S_b_std,
+        U_a_mean,
+        U_b_mean,
+        U_a_std,
+        U_b_std,
+        T,
+        N,
+        save=SAVING,
+    )
+    plot_stochastic_protein(
+        P_a_mean, P_b_mean, P_b_std, P_a_total, P_b_total, num_simulations, save=SAVING
+    )
 
     ################### Question 2 ###################
     params_dict = {
